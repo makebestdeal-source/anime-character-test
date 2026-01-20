@@ -1,12 +1,11 @@
 """
-🎯 MBTI 매칭 테스트 v3.3
+🎯 MBTI 매칭 테스트 v3.2
 =====================================
 수정사항:
-1. 공유 링크 수정 (카카오/X 정상 작동)
-2. 테스트 메뉴 텍스트 + 강조
-3. 배경 흰색 기반으로 변경
-4. 이미지 로딩 개선 (placeholder + 빠른 CDN)
-5. 언어팩 위치 개선 (우측 상단 눈에 띄게)
+- 언어 선택: 드롭다운으로 변경 (공간 절약)
+- 테스트 메뉴: 하단으로 이동
+- 상단: 현재 테스트 + 입력폼만 표시
+- 모바일 최적화
 """
 
 import streamlit as st
@@ -15,7 +14,6 @@ import hashlib
 import random
 from datetime import datetime
 import streamlit.components.v1 as components
-import urllib.parse
 
 # ============================================
 # 🎨 페이지 설정
@@ -33,89 +31,89 @@ st.set_page_config(
 TEST_CONFIG = {
     "anime": {
         "emoji": "💕", 
-        "title": {"ko": "애니 캐릭터", "en": "Anime Character", "ja": "アニメキャラ", "zh": "动漫角色", "es": "Personaje Anime"},
-        "title_full": {"ko": "나와 어울리는 애니 캐릭터는?", "en": "Which Anime Character Matches You?", 
-                       "ja": "あなたに合うアニメキャラは?", "zh": "你适合哪个动漫角色?", "es": "¿Qué personaje de anime eres?"},
+        "title": {"ko": "애니 캐릭터", "en": "Anime", "ja": "アニメ", "zh": "动漫", "es": "Anime"},
+        "title_full": {"ko": "나와 어울리는 애니 캐릭터는?", "en": "Which Anime Character?", 
+                       "ja": "あなたに合うアニメキャラは?", "zh": "你适合哪个动漫角色?", "es": "¿Qué personaje de anime?"},
         "data_file": "data/characters.json",
         "image_type": "robohash", "image_set": "set5",
         "question_type": "relationship"
     },
     "dogs": {
         "emoji": "🐕", 
-        "title": {"ko": "강아지 품종", "en": "Dog Breed", "ja": "犬種", "zh": "狗品种", "es": "Raza de Perro"},
-        "title_full": {"ko": "나랑 어울리는 강아지 품종은?", "en": "Which Dog Breed Suits You?",
-                       "ja": "あなたに合う犬種は?", "zh": "你适合哪种狗?", "es": "¿Qué raza de perro te va?"},
+        "title": {"ko": "강아지", "en": "Dog", "ja": "犬", "zh": "狗", "es": "Perro"},
+        "title_full": {"ko": "나랑 어울리는 강아지 품종은?", "en": "Which Dog Breed?",
+                       "ja": "あなたに合う犬種は?", "zh": "你适合哪种狗?", "es": "¿Qué raza de perro?"},
         "data_file": "data/dogs.json",
-        "image_type": "dog_ceo",
+        "image_type": "unsplash",
         "question_type": "pet"
     },
     "cats": {
         "emoji": "🐈", 
-        "title": {"ko": "고양이 품종", "en": "Cat Breed", "ja": "猫種", "zh": "猫品种", "es": "Raza de Gato"},
-        "title_full": {"ko": "나랑 어울리는 고양이 품종은?", "en": "Which Cat Breed Suits You?",
-                       "ja": "あなたに合う猫種は?", "zh": "你适合哪种猫?", "es": "¿Qué raza de gato te va?"},
+        "title": {"ko": "고양이", "en": "Cat", "ja": "猫", "zh": "猫", "es": "Gato"},
+        "title_full": {"ko": "나랑 어울리는 고양이 품종은?", "en": "Which Cat Breed?",
+                       "ja": "あなたに合う猫種は?", "zh": "你适合哪种猫?", "es": "¿Qué raza de gato?"},
         "data_file": "data/cats.json",
-        "image_type": "robohash", "image_set": "set4",
+        "image_type": "unsplash",
         "question_type": "pet"
     },
     "cities": {
         "emoji": "🌆", 
         "title": {"ko": "도시", "en": "City", "ja": "都市", "zh": "城市", "es": "Ciudad"},
-        "title_full": {"ko": "나랑 어울리는 도시는?", "en": "Which City Suits You?",
-                       "ja": "あなたに合う都市は?", "zh": "你适合哪个城市?", "es": "¿Qué ciudad te va?"},
+        "title_full": {"ko": "나랑 어울리는 도시는?", "en": "Which City?",
+                       "ja": "あなたに合う都市は?", "zh": "你适合哪个城市?", "es": "¿Qué ciudad?"},
         "data_file": "data/cities.json",
-        "image_type": "robohash", "image_set": "set3",
+        "image_type": "unsplash",
         "question_type": "place"
     },
     "destinations": {
         "emoji": "🏝️", 
-        "title": {"ko": "여행지", "en": "Travel Spot", "ja": "旅行先", "zh": "旅游地", "es": "Destino"},
-        "title_full": {"ko": "나랑 어울리는 여행지는?", "en": "Which Travel Spot Suits You?",
-                       "ja": "あなたに合う旅行先は?", "zh": "你适合哪个旅游地?", "es": "¿Qué destino te va?"},
+        "title": {"ko": "여행지", "en": "Travel", "ja": "旅行", "zh": "旅游", "es": "Viaje"},
+        "title_full": {"ko": "나랑 어울리는 여행지는?", "en": "Which Destination?",
+                       "ja": "あなたに合う旅行先は?", "zh": "你适合哪个旅游地?", "es": "¿Qué destino?"},
         "data_file": "data/destinations.json",
-        "image_type": "robohash", "image_set": "set3",
+        "image_type": "unsplash",
         "question_type": "travel"
     },
     "cars": {
         "emoji": "🚗", 
         "title": {"ko": "자동차", "en": "Car", "ja": "車", "zh": "汽车", "es": "Coche"},
-        "title_full": {"ko": "나랑 어울리는 자동차는?", "en": "Which Car Suits You?",
-                       "ja": "あなたに合う車は?", "zh": "你适合哪种车?", "es": "¿Qué coche te va?"},
+        "title_full": {"ko": "나랑 어울리는 자동차는?", "en": "Which Car?",
+                       "ja": "あなたに合う車は?", "zh": "你适合哪种车?", "es": "¿Qué coche?"},
         "data_file": "data/cars.json",
-        "image_type": "robohash", "image_set": "set2",
+        "image_type": "unsplash",
         "question_type": "car"
     },
     "stars": {
         "emoji": "⭐", 
-        "title": {"ko": "글로벌 스타", "en": "Global Star", "ja": "スター", "zh": "明星", "es": "Estrella"},
-        "title_full": {"ko": "나랑 어울리는 글로벌 스타는?", "en": "Which Global Star Matches You?",
-                       "ja": "あなたに合うスターは?", "zh": "你适合哪个明星?", "es": "¿Qué estrella te va?"},
+        "title": {"ko": "스타", "en": "Star", "ja": "スター", "zh": "明星", "es": "Estrella"},
+        "title_full": {"ko": "나랑 어울리는 글로벌 스타는?", "en": "Which Global Star?",
+                       "ja": "あなたに合うスターは?", "zh": "你适合哪个明星?", "es": "¿Qué estrella?"},
         "data_file": "data/global_stars.json",
         "image_type": "robohash", "image_set": "set5",
         "question_type": "relationship"
     },
     "idols": {
         "emoji": "🎤", 
-        "title": {"ko": "K-POP 아이돌", "en": "K-Pop Idol", "ja": "K-POPアイドル", "zh": "韩国偶像", "es": "Idol K-Pop"},
-        "title_full": {"ko": "나랑 어울리는 아이돌은?", "en": "Which K-Pop Idol Matches You?",
-                       "ja": "あなたに合うアイドルは?", "zh": "你适合哪个偶像?", "es": "¿Qué idol de K-Pop te va?"},
+        "title": {"ko": "아이돌", "en": "K-Pop", "ja": "アイドル", "zh": "偶像", "es": "K-Pop"},
+        "title_full": {"ko": "나랑 어울리는 아이돌은?", "en": "Which K-Pop Idol?",
+                       "ja": "あなたに合うアイドルは?", "zh": "你适合哪个偶像?", "es": "¿Qué idol de K-Pop?"},
         "data_file": "data/idols.json",
         "image_type": "robohash", "image_set": "set5",
         "question_type": "relationship"
     },
     "games": {
         "emoji": "🎮", 
-        "title": {"ko": "게임 캐릭터", "en": "Game Character", "ja": "ゲームキャラ", "zh": "游戏角色", "es": "Personaje Juego"},
-        "title_full": {"ko": "나랑 어울리는 게임 캐릭터는?", "en": "Which Game Character Matches You?",
-                       "ja": "あなたに合うゲームキャラは?", "zh": "你适合哪个游戏角色?", "es": "¿Qué personaje de juego te va?"},
+        "title": {"ko": "게임", "en": "Game", "ja": "ゲーム", "zh": "游戏", "es": "Juego"},
+        "title_full": {"ko": "나랑 어울리는 게임 캐릭터는?", "en": "Which Game Character?",
+                       "ja": "あなたに合うゲームキャラは?", "zh": "你适合哪个游戏角色?", "es": "¿Qué personaje de juego?"},
         "data_file": "data/game_characters.json",
         "image_type": "robohash", "image_set": "set2",
         "question_type": "game"
     },
     "tinipings": {
         "emoji": "🎀", 
-        "title": {"ko": "캐치티니핑", "en": "Catch Tiniping", "ja": "ティニピン", "zh": "迷你乒", "es": "Tiniping"},
-        "title_full": {"ko": "나는 어떤 캐치티니핑?", "en": "Which Tiniping Are You?",
+        "title": {"ko": "티니핑", "en": "Tiniping", "ja": "ティニピン", "zh": "迷你乒", "es": "Tiniping"},
+        "title_full": {"ko": "나는 어떤 캐치티니핑?", "en": "Which Tiniping?",
                        "ja": "あなたはどのティニピン?", "zh": "你是哪个迷你乒?", "es": "¿Qué Tiniping eres?"},
         "data_file": "data/tinipings.json",
         "image_type": "robohash", "image_set": "set4",
@@ -202,30 +200,30 @@ T = {
               "차분한": "차분한", "활발한": "활발한", "겸손한": "겸손한",
               "배려심많은": "배려심", "독립적인": "독립적",
               "낙천적인": "낙천적", "유머러스한": "유머"},
-        "disclaimer": "⚠️ 오락 목적 테스트",
+        "disclaimer": "⚠️ 오락 목적 테스트입니다",
         "privacy": "🔒 개인정보 미수집",
-        "share": "📤 결과 공유하기"
+        "lang": "🌍 언어"
     },
     "en": {
-        "nick": "Nickname", "nick_ph": "Your name",
+        "nick": "Nickname", "nick_ph": "Enter name",
         "mbti": "MBTI", "gender": "Gender", "m": "M", "f": "F",
-        "age": "Age", "pers": "💭 Pick 3 Traits",
-        "submit": "✨ See Results", "result": "{}'s Match",
+        "age": "Age", "pers": "💭 Select 3 Traits",
+        "submit": "✨ See Results", "result": "{}'s Match Result",
         "rate": "Match", "retry": "🔄 Try Again",
-        "other": "🎁 Try More Tests!",
+        "other": "🎁 Try Other Tests!",
         "ages": ["Teen", "20s", "30s", "40s", "50+"],
         "p": {"따뜻한": "Warm", "냉정한": "Cool", "열정적인": "Passionate",
               "차분한": "Calm", "활발한": "Active", "겸손한": "Humble",
               "배려심많은": "Caring", "독립적인": "Independent",
               "낙천적인": "Optimistic", "유머러스한": "Funny"},
-        "disclaimer": "⚠️ Entertainment only",
+        "disclaimer": "⚠️ For entertainment only",
         "privacy": "🔒 No data collected",
-        "share": "📤 Share Result"
+        "lang": "🌍 Language"
     },
     "ja": {
         "nick": "ニックネーム", "nick_ph": "名前",
         "mbti": "MBTI", "gender": "性別", "m": "男", "f": "女",
-        "age": "年代", "pers": "💭 性格3つ",
+        "age": "年代", "pers": "💭 性格3つ選択",
         "submit": "✨ 結果を見る", "result": "{}さんの結果",
         "rate": "マッチ率", "retry": "🔄 もう一度",
         "other": "🎁 他のテストも!",
@@ -234,17 +232,17 @@ T = {
               "차분한": "穏やか", "활발한": "活発", "겸손한": "謙虚",
               "배려심많은": "思いやり", "독립적인": "独立的",
               "낙천적인": "楽天的", "유머러스한": "面白い"},
-        "disclaimer": "⚠️ エンタメ目的",
+        "disclaimer": "⚠️ エンタメ目的です",
         "privacy": "🔒 個人情報なし",
-        "share": "📤 シェア"
+        "lang": "🌍 言語"
     },
     "zh": {
         "nick": "昵称", "nick_ph": "名字",
         "mbti": "MBTI", "gender": "性别", "m": "男", "f": "女",
-        "age": "年龄", "pers": "💭 选3个",
+        "age": "年龄", "pers": "💭 选3个性格",
         "submit": "✨ 看结果", "result": "{}的结果",
         "rate": "匹配率", "retry": "🔄 再试",
-        "other": "🎁 更多测试!",
+        "other": "🎁 试试其他!",
         "ages": ["10代", "20代", "30代", "40代", "50+"],
         "p": {"따뜻한": "温暖", "냉정한": "冷静", "열정적인": "热情",
               "차분한": "沉稳", "활발한": "活泼", "겸손한": "谦虚",
@@ -252,7 +250,7 @@ T = {
               "낙천적인": "乐观", "유머러스한": "幽默"},
         "disclaimer": "⚠️ 仅供娱乐",
         "privacy": "🔒 不收集信息",
-        "share": "📤 分享"
+        "lang": "🌍 语言"
     },
     "es": {
         "nick": "Apodo", "nick_ph": "Nombre",
@@ -260,7 +258,7 @@ T = {
         "age": "Edad", "pers": "💭 Elige 3",
         "submit": "✨ Ver Resultado", "result": "Resultado de {}",
         "rate": "Match", "retry": "🔄 Otra vez",
-        "other": "🎁 ¡Más tests!",
+        "other": "🎁 ¡Otros tests!",
         "ages": ["Teen", "20s", "30s", "40s", "50+"],
         "p": {"따뜻한": "Cálido", "냉정한": "Frío", "열정적인": "Apasionado",
               "차분한": "Tranquilo", "활발한": "Activo", "겸손한": "Humilde",
@@ -268,253 +266,153 @@ T = {
               "낙천적인": "Optimista", "유머러스한": "Gracioso"},
         "disclaimer": "⚠️ Solo entretenimiento",
         "privacy": "🔒 Sin datos",
-        "share": "📤 Compartir"
+        "lang": "🌍 Idioma"
     }
 }
 
 def t(k, lang): return T.get(lang, T["en"]).get(k, k)
 
 # ============================================
-# 🎨 CSS (흰색 배경 + 가독성)
+# 🎨 CSS
 # ============================================
 def load_css():
     st.markdown("""<style>
-    /* 깔끔한 흰색/연회색 배경 */
     .stApp {
-        background: #f5f5f5 !important;
+        background: linear-gradient(135deg, #a8edea 0%, #fed6e3 50%, #d299c2 100%);
+        min-height: 100vh;
     }
     
     .block-container {
-        padding: 1rem 0.8rem !important;
+        padding: 0.5rem !important;
         max-width: 100% !important;
     }
     
-    /* 언어 선택 박스 */
-    .lang-box {
-        background: #667eea;
-        color: white;
-        padding: 8px 15px;
-        border-radius: 25px;
-        text-align: center;
-        margin-bottom: 15px;
-        font-weight: 600;
-    }
-    
-    /* 카드 */
     .card {
         background: white;
         border-radius: 16px;
-        padding: 20px;
-        margin: 10px 0;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-        border: 1px solid #e0e0e0;
+        padding: 16px;
+        margin: 8px 0;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
     }
     
-    /* 헤더 박스 */
-    .header-box {
-        background: linear-gradient(135deg, #667eea, #764ba2);
-        border-radius: 16px;
-        padding: 20px;
-        margin: 10px 0;
-        text-align: center;
-        color: white;
-    }
-    
-    .header-emoji {
-        font-size: 50px;
-    }
-    
-    .header-title {
-        color: white;
-        margin: 10px 0 0 0;
-        font-size: 20px;
-        font-weight: 700;
-    }
-    
-    /* 결과 카드 */
     .result {
         background: white;
-        padding: 25px 15px;
+        padding: 20px 12px;
         border-radius: 20px;
         text-align: center;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-        border: 1px solid #e0e0e0;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.12);
     }
     
-    .result-title {
-        color: #667eea;
-        font-size: 16px;
-        font-weight: 600;
-        margin-bottom: 15px;
-    }
-    
-    /* 이미지 */
     .match-img {
-        width: 150px;
-        height: 150px;
+        width: min(160px, 40vw);
+        height: min(160px, 40vw);
         border-radius: 50%;
         object-fit: cover;
         border: 4px solid #667eea;
         margin: 10px auto;
         display: block;
-        background: #f0f0f0;
     }
     
-    /* 이름 - 검은색 */
     .match-name {
-        font-size: 24px;
+        font-size: clamp(20px, 5vw, 28px);
         font-weight: 800;
-        color: #1a1a1a;
-        margin: 10px 0 5px 0;
+        color: #2d3748;
+        margin: 8px 0;
     }
     
-    /* 시리즈 */
     .match-series {
-        color: #666;
-        font-size: 14px;
-        margin-bottom: 15px;
+        color: #718096;
+        font-size: clamp(11px, 3vw, 14px);
     }
     
-    /* 점수 박스 */
     .score-box {
         background: linear-gradient(135deg, #667eea, #764ba2);
-        padding: 15px 20px;
-        border-radius: 15px;
-        margin: 15px auto;
-        max-width: 140px;
-    }
-    
-    .score-label {
-        color: rgba(255,255,255,0.9);
-        font-size: 12px;
+        padding: 12px;
+        border-radius: 12px;
+        margin: 10px auto;
+        max-width: 110px;
     }
     
     .score-num {
-        font-size: 42px;
+        font-size: clamp(32px, 9vw, 44px);
         font-weight: 800;
         color: white;
     }
     
-    .score-msg {
-        color: white;
-        font-size: 14px;
-    }
-    
-    /* 태그 */
     .tag {
         display: inline-block;
-        background: #667eea;
+        background: linear-gradient(135deg, #667eea, #764ba2);
         color: white;
-        padding: 6px 14px;
-        border-radius: 20px;
-        margin: 3px;
-        font-size: 13px;
+        padding: 5px 12px;
+        border-radius: 12px;
+        margin: 2px;
+        font-size: clamp(10px, 2.5vw, 13px);
     }
     
-    /* MBTI 배지 */
     .mbti-badge {
         display: inline-block;
         background: linear-gradient(135deg, #f093fb, #f5576c);
         color: white;
-        padding: 8px 20px;
-        border-radius: 25px;
+        padding: 5px 14px;
+        border-radius: 8px;
         font-weight: 700;
-        font-size: 16px;
-        margin: 10px 0;
+        font-size: clamp(12px, 3vw, 15px);
     }
     
-    /* 공유 섹션 */
-    .share-section {
-        background: #f8f9fa;
-        border-radius: 12px;
-        padding: 15px;
-        margin: 15px 0;
+    .header-box {
+        background: white;
+        border-radius: 16px;
+        padding: 12px;
+        margin: 8px 0;
         text-align: center;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.08);
     }
     
-    .share-title {
-        color: #333;
+    .header-emoji {
+        font-size: clamp(36px, 10vw, 50px);
+    }
+    
+    .header-title {
+        color: #2d3748;
+        margin: 5px 0;
+        font-size: clamp(16px, 4.5vw, 22px);
+        font-weight: 700;
+    }
+    
+    .other-tests {
+        background: white;
+        border-radius: 16px;
+        padding: 15px 10px;
+        margin: 15px 0;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+    }
+    
+    .other-tests-title {
+        text-align: center;
+        color: #4a5568;
         font-size: 14px;
         font-weight: 600;
         margin-bottom: 10px;
     }
     
-    /* 다른 테스트 섹션 - 강조! */
-    .other-tests {
-        background: linear-gradient(135deg, #ff9a9e, #fecfef);
-        border-radius: 16px;
-        padding: 20px 15px;
-        margin: 20px 0;
-        border: 2px solid #ff6b9d;
-    }
-    
-    .other-tests-title {
-        text-align: center;
-        color: #c0392b;
-        font-size: 18px;
-        font-weight: 700;
-        margin-bottom: 15px;
-    }
-    
-    .test-btn {
-        display: block;
-        background: white;
-        border: 2px solid #667eea;
-        border-radius: 12px;
-        padding: 10px 5px;
-        margin: 5px 0;
-        text-align: center;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-    
-    .test-btn:hover {
-        background: #667eea;
-        color: white;
-    }
-    
-    .test-btn-emoji {
-        font-size: 24px;
-        display: block;
-    }
-    
-    .test-btn-text {
-        font-size: 11px;
-        color: #333;
-        font-weight: 600;
-        margin-top: 3px;
-    }
-    
-    /* 푸터 */
     .footer {
-        background: white;
+        background: rgba(255,255,255,0.8);
         border-radius: 12px;
         text-align: center;
-        padding: 15px;
-        margin-top: 20px;
-        font-size: 11px;
-        color: #666;
-        border: 1px solid #e0e0e0;
+        padding: 12px 8px;
+        margin-top: 15px;
+        font-size: 10px;
+        color: #4a5568;
     }
     
-    /* 반응형 */
     @media (max-width: 768px) {
         .stButton > button {
-            min-height: 44px !important;
+            min-height: 40px !important;
+            font-size: 13px !important;
+            padding: 4px 8px !important;
+        }
+        .stSelectbox > div > div {
             font-size: 14px !important;
-        }
-        .header-emoji {
-            font-size: 40px;
-        }
-        .header-title {
-            font-size: 18px;
-        }
-        .match-img {
-            width: 130px;
-            height: 130px;
-        }
-        .match-name {
-            font-size: 20px;
         }
     }
     </style>
@@ -531,13 +429,15 @@ def scroll_to_top():
     """, height=0)
 
 # ============================================
-# 🖼️ 이미지 URL (빠른 로딩)
+# 🖼️ 이미지 URL
 # ============================================
 def get_img(name, name_en, cfg):
-    # RoboHash 사용 (빠르고 안정적)
-    seed = hashlib.md5((name + (name_en or "")).encode()).hexdigest()
-    img_set = cfg.get('image_set', 'set5')
-    return f"https://robohash.org/{seed}.png?set={img_set}&size=200x200&bgset=bg1"
+    if cfg.get('image_type') == 'unsplash':
+        q = (name_en or name).replace(" ", ",").replace("(", "").replace(")", "")[:50]
+        return f"https://source.unsplash.com/300x300/?{q}"
+    seed = hashlib.md5(name.encode()).hexdigest()
+    s = cfg.get('image_set', 'set5')
+    return f"https://robohash.org/{seed}.png?set={s}&size=300x300"
 
 # ============================================
 # 📊 MBTI 궁합
@@ -581,73 +481,61 @@ def load(f, cfg):
 def ad(lang):
     if st.session_state.get('ad_shown'): return
     components.html("""
-    <div style="text-align:center;padding:12px;margin:15px 0;
-                background:#f0f0f0;border-radius:10px;border:1px dashed #ccc;">
-        <p style="color:#999;font-size:11px;margin:0;">Ad Space</p>
+    <div style="text-align:center;padding:10px;margin:10px 0;
+                background:rgba(255,255,255,0.5);border-radius:10px;">
+        <p style="color:#718096;font-size:10px;margin:0;">Sponsored</p>
     </div>
-    """, height=50)
+    """, height=40)
     st.session_state['ad_shown'] = True
 
 # ============================================
-# 📤 공유 (수정됨 - URL 인코딩)
+# 📤 공유
 # ============================================
-def share(name, score, title, lang, app_url):
+def share(name, score, title, lang):
     texts = {
-        "ko": f"나와 어울리는 {title}: {name}! 매칭률 {score}% 🎯",
-        "en": f"My {title} match: {name}! {score}% 🎯",
-        "ja": f"私の{title}マッチ: {name}! {score}% 🎯",
-        "zh": f"我的{title}匹配: {name}! {score}% 🎯",
-        "es": f"Mi {title}: {name}! {score}% 🎯"
+        "ko": f"나와 어울리는 {title}: {name}! {score}%",
+        "en": f"My {title}: {name}! {score}%",
+        "ja": f"私の{title}: {name}! {score}%",
+        "zh": f"我的{title}: {name}! {score}%",
+        "es": f"Mi {title}: {name}! {score}%"
     }
     txt = texts.get(lang, texts["en"])
+    url = "https://anime-character-test.streamlit.app"
+    kakao = f"https://story.kakao.com/share?url={url}"
     
-    # URL 인코딩 (특수문자 처리)
-    encoded_text = urllib.parse.quote(txt, safe='')
-    encoded_url = urllib.parse.quote(app_url, safe='')
-    
-    # 각 플랫폼 공유 URL
-    twitter_url = f"https://twitter.com/intent/tweet?text={encoded_text}&url={encoded_url}"
-    facebook_url = f"https://www.facebook.com/sharer/sharer.php?u={encoded_url}"
-    
-    st.markdown(f"""
-    <div class="share-section">
-        <div class="share-title">{t('share', lang)}</div>
-        <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
-            <a href="{twitter_url}" target="_blank" 
-               style="background:#000;color:white;padding:10px 20px;border-radius:25px;
-                      text-decoration:none;font-weight:600;font-size:14px;display:inline-block;">
-                𝕏 Post
-            </a>
-            <a href="{facebook_url}" target="_blank"
-               style="background:#1877f2;color:white;padding:10px 20px;border-radius:25px;
-                      text-decoration:none;font-weight:600;font-size:14px;display:inline-block;">
-                Facebook
-            </a>
-        </div>
+    components.html(f"""
+    <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin:10px 0;">
+        <a href="{kakao}" target="_blank"
+           style="background:#FEE500;color:#3C1E1E;padding:8px 14px;border-radius:8px;
+                  text-decoration:none;font-weight:600;font-size:12px;">💬 카카오</a>
+        <a href="https://www.facebook.com/sharer/sharer.php?u={url}&quote={txt}" target="_blank"
+           style="background:#1877f2;color:white;padding:8px 14px;border-radius:8px;
+                  text-decoration:none;font-weight:600;font-size:12px;">📘 Facebook</a>
+        <a href="https://twitter.com/intent/tweet?text={txt}&url={url}" target="_blank"
+           style="background:#1da1f2;color:white;padding:8px 14px;border-radius:8px;
+                  text-decoration:none;font-weight:600;font-size:12px;">🐦 Twitter</a>
     </div>
-    """, unsafe_allow_html=True)
+    """, height=50)
 
 # ============================================
-# 🔄 하단 테스트 메뉴 (텍스트 + 강조)
+# 🔄 하단 테스트 메뉴
 # ============================================
 def bottom_menu(cur, lang):
     st.markdown(f"""
     <div class="other-tests">
-        <div class="other-tests-title">🎁 {t('other', lang)}</div>
+        <div class="other-tests-title">{t('other', lang)}</div>
     </div>
     """, unsafe_allow_html=True)
     
     tests = list(TEST_CONFIG.items())
     
-    # 2줄 (5개씩) - 텍스트 포함
+    # 2줄로 표시 (5개씩)
     cols1 = st.columns(5)
     for i, (k, v) in enumerate(tests[:5]):
         with cols1[i]:
             title = v['title'].get(lang, v['title']['en'])
-            # 긴 텍스트 줄이기
-            short_title = title[:6] + ".." if len(title) > 6 else title
             btn_type = "primary" if k == cur else "secondary"
-            if st.button(f"{v['emoji']}\n{short_title}", key=f"b1_{k}", use_container_width=True, type=btn_type):
+            if st.button(f"{v['emoji']}", key=f"b1_{k}", use_container_width=True, type=btn_type, help=title):
                 st.session_state.cur = k
                 st.session_state.done = False
                 st.session_state.result = []
@@ -659,9 +547,8 @@ def bottom_menu(cur, lang):
     for i, (k, v) in enumerate(tests[5:]):
         with cols2[i]:
             title = v['title'].get(lang, v['title']['en'])
-            short_title = title[:6] + ".." if len(title) > 6 else title
             btn_type = "primary" if k == cur else "secondary"
-            if st.button(f"{v['emoji']}\n{short_title}", key=f"b2_{k}", use_container_width=True, type=btn_type):
+            if st.button(f"{v['emoji']}", key=f"b2_{k}", use_container_width=True, type=btn_type, help=title):
                 st.session_state.cur = k
                 st.session_state.done = False
                 st.session_state.result = []
@@ -676,8 +563,7 @@ def footer(lang):
     st.markdown(f"""
     <div class="footer">
         <p>{t('disclaimer', lang)} | {t('privacy', lang)}</p>
-        <p>© {datetime.now().year} MBTI Match Test</p>
-        <p style="margin-top:5px;font-size:10px;color:#999;">Images: RoboHash (AI Generated)</p>
+        <p>© {datetime.now().year} MBTI Match | Unsplash/RoboHash</p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -686,9 +572,6 @@ def footer(lang):
 # ============================================
 def main():
     load_css()
-    
-    # ⚠️ 여기에 실제 앱 URL 입력!
-    APP_URL = "https://anime-character-test.streamlit.app"
     
     # 초기화
     if 'cur' not in st.session_state: st.session_state.cur = 'anime'
@@ -699,6 +582,7 @@ def main():
     if 'ad_shown' not in st.session_state: st.session_state.ad_shown = False
     if 'scroll_top' not in st.session_state: st.session_state.scroll_top = False
     
+    # 상단 이동
     if st.session_state.scroll_top:
         scroll_to_top()
         st.session_state.scroll_top = False
@@ -708,20 +592,26 @@ def main():
     cfg = TEST_CONFIG[cur]
     
     # ============================================
-    # 🌍 언어 선택 (눈에 띄는 위치)
+    # 🌍 언어 선택 (드롭다운 - 한 줄)
     # ============================================
-    st.markdown(f'<div class="lang-box">🌍 Language / 언어</div>', unsafe_allow_html=True)
+    lang_list = list(LANG_OPTIONS.keys())
+    lang_labels = list(LANG_OPTIONS.values())
+    current_idx = lang_list.index(lang) if lang in lang_list else 0
     
-    lang_cols = st.columns(5)
-    for i, (code, label) in enumerate(LANG_OPTIONS.items()):
-        with lang_cols[i]:
-            btn_type = "primary" if lang == code else "secondary"
-            if st.button(label.split()[0], key=f"lang_{code}", use_container_width=True, type=btn_type):
-                st.session_state.lang = code
-                st.rerun()
+    selected_lang = st.selectbox(
+        t('lang', lang),
+        lang_list,
+        index=current_idx,
+        format_func=lambda x: LANG_OPTIONS[x],
+        label_visibility="collapsed"
+    )
+    
+    if selected_lang != lang:
+        st.session_state.lang = selected_lang
+        st.rerun()
     
     # ============================================
-    # 📝 헤더
+    # 📝 헤더 (현재 테스트)
     # ============================================
     title_full = cfg['title_full'].get(lang, cfg['title_full']['en'])
     st.markdown(f"""
@@ -776,9 +666,9 @@ def main():
             
             if st.form_submit_button(t('submit',lang), use_container_width=True, type="primary"):
                 if not name.strip():
-                    st.error("⚠️ " + t('nick', lang))
+                    st.error("⚠️")
                 elif len(sel) != 3:
-                    st.error("⚠️ 3개 선택!" if lang == 'ko' else "⚠️ Select 3!")
+                    st.error("⚠️ 3")
                 else:
                     st.session_state.user = {
                         'name': name.strip()[:12], 'mbti': mbti, 
@@ -808,36 +698,31 @@ def main():
             
             st.markdown(f"""
             <div class="result">
-                <div class="result-title">{t('result',lang).format(u['name'])}</div>
+                <p style="color:#667eea;font-size:14px;font-weight:600;">
+                    {t('result',lang).format(u['name'])}
+                </p>
                 <img src="{top.get('image_url','')}" class="match-img" 
-                     onerror="this.src='https://robohash.org/error.png?set=set5&size=200x200'" 
-                     loading="lazy" alt="{top['name']}">
+                     onerror="this.src='https://robohash.org/x.png?set=set5'" loading="lazy">
                 <div class="match-name">{top['name']}</div>
                 <div class="match-series">{top.get('series','')}</div>
                 <div class="score-box">
-                    <div class="score-label">{t('rate',lang)}</div>
+                    <div style="color:rgba(255,255,255,0.85);font-size:10px;">{t('rate',lang)}</div>
                     <div class="score-num">{sc}%</div>
-                    <div class="score-msg">{msg}</div>
+                    <div style="color:white;font-size:12px;">{msg}</div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
             
-            # 태그
             tags = ''.join([f'<span class="tag">{t("p",lang).get(p,p)}</span>' 
                            for p in top.get('personality',[])[:4]])
-            st.markdown(f'<div style="text-align:center;margin:15px 0;">{tags}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="text-align:center;margin:8px 0;">{tags}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="text-align:center;"><span class="mbti-badge">{top.get("mbti","?")}</span></div>', unsafe_allow_html=True)
             
-            # MBTI
-            st.markdown(f'<div style="text-align:center;"><span class="mbti-badge">MBTI: {top.get("mbti","?")}</span></div>', unsafe_allow_html=True)
-            
-            # 광고
             ad(lang)
             
-            # 공유
             title = cfg['title'].get(lang, cfg['title']['en'])
-            share(top['name'], sc, title, lang, APP_URL)
+            share(top['name'], sc, title, lang)
             
-            # 다시하기
             if st.button(t('retry',lang), use_container_width=True, type="primary"):
                 st.session_state.done = False
                 st.session_state.result = []
@@ -846,7 +731,7 @@ def main():
                 st.rerun()
     
     # ============================================
-    # 📋 하단 테스트 메뉴
+    # 📋 하단 테스트 메뉴 (항상 표시)
     # ============================================
     bottom_menu(cur, lang)
     footer(lang)
